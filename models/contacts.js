@@ -1,19 +1,63 @@
-// const fs = require('fs/promises')
+const { Schema, model } = require("mongoose");
+const { handleSaveErrors } = require("../helpers");
+const Joi = require("joi");
 
-const listContacts = async () => {}
+const emailRegExp = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+const phoneRegExp =
+    /^(\+?\d{0,4})?\s?-?\s?(\(?\d{3}\)?)\s?-?\s?(\(?\d{3}\)?)\s?-?\s?(\(?\d{4}\)?)?$/;
 
-const getContactById = async (contactId) => {}
+const contactSchema = new Schema(
+    {
+        name: {
+            type: String,
+            require: true,
+            minLength: 3,
+            maxLength: 30,
+        },
+        email: {
+            type: String,
+            trim: true,
+            lowercase: true,
+            unique: true,
+            required: true,
+            match: [emailRegExp, "Please fill a valid email address"],
+        },
+        phone: {
+            type: String,
+            match: [phoneRegExp, "Please fill a valid phone number"],
+            require: true,
+            unique: true,
+        },
+        favorite: {
+            type: Boolean,
+            default: false,
+        },
+    },
+    { versionKey: false, timestamps: true }
+);
 
-const removeContact = async (contactId) => {}
+contactSchema.post("save", handleSaveErrors);
 
-const addContact = async (body) => {}
+const contactsSchema = Joi.object({
+    name: Joi.string().min(3).max(30).required(),
+    email: Joi.string().pattern(emailRegExp).required().messages({
+        "string.pattern.base": `Please fill a valid email address`,
+    }),
+    phone: Joi.string().pattern(phoneRegExp).required().messages({
+        "string.pattern.base": `Please fill a valid phone number`,
+    }),
+    favorite: Joi.boolean(),
+});
 
-const updateContact = async (contactId, body) => {}
+const favoriteSchema = Joi.object({
+    favorite: Joi.boolean().required(),
+});
 
-module.exports = {
-  listContacts,
-  getContactById,
-  removeContact,
-  addContact,
-  updateContact,
-}
+const schemas = {
+    contactsSchema,
+    favoriteSchema,
+};
+
+const Contact = model("contact", contactSchema);
+
+module.exports = { Contact, schemas };
